@@ -1,5 +1,6 @@
 package com.ipartek.formacion.controller;
 
+import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
@@ -36,6 +37,7 @@ public class PokemonController extends HttpServlet {
 	Object responseBody = null;
 	int statusCode = HttpServletResponse.SC_OK;
 	String pathinfo;
+	int idPokemon;
 	
 	
 	private static PokemonDAO dao;   
@@ -63,7 +65,20 @@ public class PokemonController extends HttpServlet {
 
 		response.setContentType("application/json");
 		response.setCharacterEncoding("utf-8");
+		
+		//habilitar CORS
+		response.setHeader("Access-Control-Allow-Origin", "*");
+		response.setHeader("Access-Control-Allow-Methods", "GET,POST,DELETE,PUT");
+		
 		pathinfo = request.getPathInfo();
+		
+		try {
+			
+			idPokemon = Utilidades.obtenerId(pathInfo);
+			
+		} catch (Exception e) {
+			LOG.debug(e);
+		}
 		
 		super.service(request, response);
 		
@@ -137,7 +152,31 @@ public class PokemonController extends HttpServlet {
 	 * @see HttpServlet#doPut(HttpServletRequest, HttpServletResponse)
 	 */
 	protected void doPut(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-		// TODO Auto-generated method stub
+		
+		// convertir json del request body a Objeto
+				BufferedReader reader = request.getReader();
+				Gson gson = new Gson();
+				Pokemon poNuevo = gson.fromJson(reader, Pokemon.class);
+				LOG.debug(" Json convertido a Objeto: " + poNuevo);
+
+				try {
+					idPokemon = Utilidades.obtenerId(pathInfo);
+					if (idPokemon != -1) {
+						pokemonDao.update(poNuevo);
+					}
+				} catch (Exception e) {
+					LOG.error(e);
+				}
+
+				if (poNuevo == null) {
+					statusCode = HttpServletResponse.SC_NO_CONTENT;
+				} else {
+					statusCode = HttpServletResponse.SC_OK;
+					// response body
+					responseBody = poNuevo;
+				}
+			
+		
 	}
 
 	/**
