@@ -1,9 +1,9 @@
 package com.ipartek.formacion.model;
 
+import java.sql.CallableStatement;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
-import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -22,14 +22,18 @@ public class PokemonDAO implements IDAO<Pokemon>{
 														+ "FROM 	pokemon p,pokemon_has_habilidad ph,	habilidad h "
 														+ "WHERE ph.id_pokemon = p.id AND ph.id_habilidad = h.id;";
 	
-	private final static String SELECT_GET_BY_ID =	 	"SELECT p.id 'id_pokemon', p.nombre 'nombre_pokemon', h.nombre 'nombre_habilidad', h.id 'id_habilidad' "
-														+ " FROM pokemon p, pokemon_has_habilidad ph, habilidad h "
-														+ " WHERE p.id = ph.id_pokemon AND ph.id_habilidad = h.id AND p.id = ? "
-														+ " ORDER BY p.id DESC LIMIT 500;";
+	private final static String SELECT_GET_BY_ID =	 	"SELECT p.id 'id_pokemon', p.nombre 'nombre_pokemon', h.nombre 'nombre_habilidad' "
+														+ "FROM (pokemon p LEFT JOIN  pokemon_has_habilidad ph ON p.id = ph.id_pokemon) LEFT JOIN habilidad h ON ph.id_habilidad = h.id "
+														+ "WHERE p.id = ? ORDER BY p.id DESC LIMIT 500;";
 	
 	private final static String SELECT_GET_BY_NOMBRE =  "SELECT  p.id AS id_pokemon , p.nombre as nombre_pokemon ,h.id AS id_habilidad,h.nombre AS nombre_habilidad \r\n" + 
-			"FROM 	pokemon p,	pokemon_has_habilidad ph,habilidad h \r\n" + 
-			"WHERE ph.id_pokemon = p.id AND ph.id_habilidad = h.id AND p.nombre LIKE ?;";
+														"FROM 	pokemon p,	pokemon_has_habilidad ph,habilidad h \r\n" + 
+														"WHERE ph.id_pokemon = p.id AND ph.id_habilidad = h.id AND p.nombre LIKE ? ;";
+	
+	private final static String SQL_UPDATE =  "UPDATE pokemon p SET nombre= ?  WHERE  id= ?;";
+	
+	private final static String SQL_DELETE =  "DELETE FROM pokemon WHERE id=?;";
+	
 	
 	private static PokemonDAO INSTANCE;
 	
@@ -100,7 +104,8 @@ public class PokemonDAO implements IDAO<Pokemon>{
 		HashMap<Integer, Pokemon> hm = new HashMap<Integer, Pokemon>();
 		Pokemon p = null;
 
-		try (Connection con = ConnectionManager.getConnection(); PreparedStatement pst = con.prepareStatement(sql);) {
+		try (Connection con = ConnectionManager.getConnection(); 
+				PreparedStatement pst = con.prepareStatement(sql);) {
 
 			pst.setInt(1, id);
 
@@ -146,9 +151,60 @@ public class PokemonDAO implements IDAO<Pokemon>{
 
 		return new ArrayList<Pokemon>(hm.values());
 	}
-	
+		
 
-	private Pokemon mapper(HashMap<Integer, Pokemon> hm, ResultSet rs) throws Exception {
+	@Override
+	public Pokemon delete(int id) throws Exception {//SQL_DELETE
+		
+		Pokemon registro = null;
+		try (Connection con = ConnectionManager.getConnection();
+				CallableStatement pst = con.prepareCall(SQL_DELETE)) {
+
+			pst.setInt(1, id);
+
+			LOG.debug(pst);
+
+			registro = this.getById(id); // recuperar
+
+			int affectedRows = pst.executeUpdate(); // eliminar
+			if (affectedRows != 1) {
+				registro = null;
+				throw new Exception("No se puede eliminar " + registro);
+			}
+
+		}
+		return registro;
+	}
+
+	@Override
+	public Pokemon update(Pokemon pojo) throws Exception {
+
+			try (Connection con = ConnectionManager.getConnection();
+					CallableStatement pst = con.prepareCall(SQL_UPDATE)) {
+
+				pst.setString(1, pojo.getNombre());
+				pst.setInt(2, pojo.getId());
+
+				LOG.debug(pst);
+
+				int affectedRows = pst.executeUpdate(); // lanza una excepcion si nombre repetido
+				if (affectedRows == 1) {
+					LOG.debug("Pokeomn actualizado correctamente");
+				} else {
+					throw new Exception("No se encontro registro para id=" + pojo.getId());
+				}
+
+			}
+			return pojo;
+		}
+
+	@Override
+	public Pokemon create(Pokemon pojo) throws Exception {
+		// TODO Auto-generated method stub
+		return null;
+	}
+	
+private Pokemon mapper(HashMap<Integer, Pokemon> hm, ResultSet rs) throws Exception {
 		
 		int idPokemon = rs.getInt("id_pokemon");
 		
@@ -173,25 +229,6 @@ public class PokemonDAO implements IDAO<Pokemon>{
 		hm.put(idPokemon, p);	
 		
 		return p;
-	}
-	
-
-	@Override
-	public Pokemon delete(int id) throws Exception {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	@Override
-	public Pokemon update(Pokemon pojo) throws Exception {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	@Override
-	public Pokemon create(Pokemon pojo) throws Exception {
-		// TODO Auto-generated method stub
-		return null;
 	}
 
 }//class

@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
 
+import javax.servlet.Servlet;
 import javax.servlet.ServletConfig;
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
@@ -30,7 +31,7 @@ public class PokemonController extends HttpServlet {
 	private static final long serialVersionUID = 1L;
 	private final static Logger LOG = LogManager.getLogger(PokemonController.class);
 	
-	private PokemonDAO pokemonDao;
+	
 	private String pathInfo;
 	private ValidatorFactory factory;
 	private Validator validator;
@@ -74,7 +75,7 @@ public class PokemonController extends HttpServlet {
 		
 		try {
 			
-			idPokemon = Utilidades.obtenerId(pathInfo);
+			idPokemon = Utilidades.obtenerId(pathinfo);
 			
 		} catch (Exception e) {
 			LOG.debug(e);
@@ -160,13 +161,11 @@ public class PokemonController extends HttpServlet {
 				LOG.debug(" Json convertido a Objeto: " + poNuevo);
 
 				try {
-					idPokemon = Utilidades.obtenerId(pathInfo);
-					if (idPokemon != -1) {
-						pokemonDao.update(poNuevo);
-					}
+					dao.update(poNuevo);
 				} catch (Exception e) {
-					LOG.error(e);
+					LOG.debug(e);
 				}
+				
 
 				if (poNuevo == null) {
 					statusCode = HttpServletResponse.SC_NO_CONTENT;
@@ -183,7 +182,28 @@ public class PokemonController extends HttpServlet {
 	 * @see HttpServlet#doDelete(HttpServletRequest, HttpServletResponse)
 	 */
 	protected void doDelete(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-		// TODO Auto-generated method stub
+
+		Pokemon po = null;
+			try {
+				if (idPokemon != -1) {
+					po = dao.delete(idPokemon);
+				}
+			} catch (Exception e) {
+				LOG.error(e);
+			}
+
+			if (po == null) {
+				statusCode =  HttpServletResponse.SC_NO_CONTENT;
+			} else {
+				statusCode = HttpServletResponse.SC_OK;
+				// response body
+				responseBody = po;
+
+			}
+
+		
+			
+			
 	}
 
 }
