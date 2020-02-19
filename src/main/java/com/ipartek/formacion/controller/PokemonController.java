@@ -70,6 +70,8 @@ public class PokemonController extends HttpServlet {
 		//habilitar CORS
 		response.setHeader("Access-Control-Allow-Origin", "*");
 		response.setHeader("Access-Control-Allow-Methods", "GET,POST,DELETE,PUT");
+		response.setHeader("Access-Control-Allow-Headers", "Content-Type");
+		
 		
 		pathinfo = request.getPathInfo();
 		
@@ -82,6 +84,27 @@ public class PokemonController extends HttpServlet {
 		}
 		
 		super.service(request, response);
+		
+		
+		response.setStatus(statusCode);
+		
+		try( PrintWriter out = response.getWriter() ){
+			
+			if ( responseBody != null ) {
+				statusCode = HttpServletResponse.SC_OK;
+				Gson json = new Gson();
+				out.print( json.toJson(responseBody) );
+				out.flush();
+			}else {
+				statusCode = HttpServletResponse.SC_NOT_FOUND;
+				String error = "Error 404 los datos que solicita no existen en nuestra base de datos!";
+				Gson json = new Gson();
+				out.print( json.toJson(error) );
+				out.flush();
+			}
+			
+		}
+		
 		
 		
 	}
@@ -120,24 +143,7 @@ public class PokemonController extends HttpServlet {
 			
 		}
 		
-		response.setStatus(statusCode);
 		
-		try( PrintWriter out = response.getWriter() ){
-			
-			if ( responseBody != null ) {
-				statusCode = HttpServletResponse.SC_OK;
-				Gson json = new Gson();
-				out.print( json.toJson(responseBody) );
-				out.flush();
-			}else {
-				statusCode = HttpServletResponse.SC_NOT_FOUND;
-				String error = "Error 404 los datos que solicita no existen en nuestra base de datos!";
-				Gson json = new Gson();
-				out.print( json.toJson(error) );
-				out.flush();
-			}
-			
-		}
 		
 	}
 
@@ -145,12 +151,33 @@ public class PokemonController extends HttpServlet {
 	 * @see HttpServlet#doPost(HttpServletRequest request, HttpServletResponse response)
 	 */
 	protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-		// TODO Auto-generated method stub
-		doGet(request, response);
+		//Convertir json del request body a Objeto
+		BufferedReader reader = request.getReader();
+		Gson gson = new Gson();
+		Pokemon poNuevo = gson.fromJson(reader, Pokemon.class);
+		LOG.debug(" Json convertido a Objeto: " + poNuevo);
+		
+		
+		if (poNuevo == null) {
+			statusCode = HttpServletResponse.SC_NO_CONTENT;
+			
+		} else if(poNuevo.getId() == 0) {
+			
+					try {
+						dao.create(poNuevo);
+					} catch (Exception e) {
+						LOG.debug(e);
+					}
+					statusCode = HttpServletResponse.SC_CREATED;
+					// response body
+					responseBody = poNuevo;
+		}
+
 	}
 
 	/**
 	 * @see HttpServlet#doPut(HttpServletRequest, HttpServletResponse)
+	 * 
 	 */
 	protected void doPut(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
 		
@@ -174,8 +201,6 @@ public class PokemonController extends HttpServlet {
 					// response body
 					responseBody = poNuevo;
 				}
-			
-		
 	}
 
 	/**

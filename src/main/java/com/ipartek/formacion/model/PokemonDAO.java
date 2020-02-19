@@ -1,9 +1,11 @@
 package com.ipartek.formacion.model;
 
+import java.security.KeyStore.ProtectionParameter;
 import java.sql.CallableStatement;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -17,12 +19,12 @@ import com.ipartek.formacion.model.pojo.Pokemon;
 public class PokemonDAO implements IDAO<Pokemon>{
 	
 	private final static Logger LOG = LogManager.getLogger(PokemonDAO.class);
-	//sentencias SQL
-	private final static String SELECT_GET_ALL =  		"SELECT p.id AS id_pokemon ,p.nombre as nombre_pokemon , h.id AS id_habilidad, h.nombre AS nombre_habilidad "
-														+ "FROM 	pokemon p,pokemon_has_habilidad ph,	habilidad h "
-														+ "WHERE ph.id_pokemon = p.id AND ph.id_habilidad = h.id;";
+	//SENTENCIOAS SQL
+	private final static String SELECT_GET_ALL =  		"SELECT p.id 'id_pokemon', p.nombre 'nombre_pokemon',h.id 'id_habilidad' , h.nombre 'nombre_habilidad' "
+														+ "FROM (pokemon p LEFT JOIN  pokemon_has_habilidad ph ON p.id = ph.id_pokemon) LEFT JOIN habilidad h ON ph.id_habilidad = h.id "
+														+ " ORDER BY p.id DESC LIMIT 500;";
 	
-	private final static String SELECT_GET_BY_ID =	 	"SELECT p.id 'id_pokemon', p.nombre 'nombre_pokemon', h.nombre 'nombre_habilidad' "
+	private final static String SELECT_GET_BY_ID =	 	"SELECT p.id 'id_pokemon', p.nombre 'nombre_pokemon',h.id 'id_habilidad' , h.nombre 'nombre_habilidad' "
 														+ "FROM (pokemon p LEFT JOIN  pokemon_has_habilidad ph ON p.id = ph.id_pokemon) LEFT JOIN habilidad h ON ph.id_habilidad = h.id "
 														+ "WHERE p.id = ? ORDER BY p.id DESC LIMIT 500;";
 	
@@ -31,8 +33,8 @@ public class PokemonDAO implements IDAO<Pokemon>{
 														"WHERE ph.id_pokemon = p.id AND ph.id_habilidad = h.id AND p.nombre LIKE ? ;";
 	
 	private final static String SQL_UPDATE =  "UPDATE pokemon p SET nombre= ?  WHERE  id= ?;";
-	
 	private final static String SQL_DELETE =  "DELETE FROM pokemon WHERE id=?;";
+	private final static String SQL_INSERT =  "INSERT INTO pokemon (`nombre`) VALUES (?);";
 	
 	
 	private static PokemonDAO INSTANCE;
@@ -93,7 +95,7 @@ public class PokemonDAO implements IDAO<Pokemon>{
 		}
 
 		return new ArrayList<Pokemon>(hm.values());
-	}
+	}//getAll
 
 	@Override
 	public Pokemon getById(int id) {
@@ -121,7 +123,7 @@ public class PokemonDAO implements IDAO<Pokemon>{
 		}
 
 		return p;
-	}
+	}//getById
 	
 	
 	
@@ -134,7 +136,8 @@ public class PokemonDAO implements IDAO<Pokemon>{
 		HashMap<Integer, Pokemon> hm = new HashMap<Integer, Pokemon>();
 		
 
-		try (Connection con = ConnectionManager.getConnection(); PreparedStatement pst = con.prepareStatement(sql);) {
+		try (Connection con = ConnectionManager.getConnection(); 
+				PreparedStatement pst = con.prepareStatement(sql);) {
 			
 			//para buscar en la SELECT con la clausula LIKE le concatenamos el "nombre" entre %
 			pst.setString(1, "%" + nombre + "%");
@@ -150,7 +153,7 @@ public class PokemonDAO implements IDAO<Pokemon>{
 		}
 
 		return new ArrayList<Pokemon>(hm.values());
-	}
+	}//getByNombre
 		
 
 	@Override
@@ -158,7 +161,7 @@ public class PokemonDAO implements IDAO<Pokemon>{
 		
 		Pokemon registro = null;
 		try (Connection con = ConnectionManager.getConnection();
-				CallableStatement pst = con.prepareCall(SQL_DELETE)) {
+				PreparedStatement pst = con.prepareStatement(SQL_DELETE)) {
 
 			pst.setInt(1, id);
 
@@ -174,13 +177,13 @@ public class PokemonDAO implements IDAO<Pokemon>{
 
 		}
 		return registro;
-	}
+	}//delete
 
 	@Override
 	public Pokemon update(Pokemon pojo) throws Exception {
 
 			try (Connection con = ConnectionManager.getConnection();
-					CallableStatement pst = con.prepareCall(SQL_UPDATE)) {
+					PreparedStatement pst = con.prepareStatement(SQL_UPDATE)) {
 
 				pst.setString(1, pojo.getNombre());
 				pst.setInt(2, pojo.getId());
@@ -196,13 +199,60 @@ public class PokemonDAO implements IDAO<Pokemon>{
 
 			}
 			return pojo;
-		}
+		}//update
 
 	@Override
 	public Pokemon create(Pokemon pojo) throws Exception {
-		// TODO Auto-generated method stub
-		return null;
-	}
+		try (Connection con = ConnectionManager.getConnection();
+				PreparedStatement ps = con.prepareStatement(SQL_INSERT, Statement.RETURN_GENERATED_KEYS )) {
+			
+			try {
+				
+			/*
+				//no guardara nada en la base de datos por ahora
+				con.setAutoCommit(false);*/
+				
+				ps.setString(1, pojo.getNombre());
+	
+				//insert en la tabla
+				//coger el id generado
+				LOG.debug(ps);
+				
+				int affectedRows = ps.executeUpdate();
+				if (affectedRows == 1) {
+					
+					
+					ResultSet rs = ps.getGeneratedKeys();
+					if (rs.next()) {
+						// conseguimos el ID que acabamos de crear
+						pojo.setId(rs.getInt(1));
+					}
+				}
+				/*
+				//creamon un array de habilidades y
+				//(froEach) por cada habilidad , si es que la tiene
+					//INSERT en la tabla pokemon_has_habilidad.
+				
+				
+				
+				//SI TODO VA BIEN se insertear en la base de datos
+				con.commit();
+				*/
+			} catch (Exception e) {
+				//con.rollback();
+				LOG.error(e);
+			} finally {
+				if(con != null)
+				con.close();
+			}
+
+		}
+
+		return pojo;
+		
+		
+		
+	}//create
 	
 private Pokemon mapper(HashMap<Integer, Pokemon> hm, ResultSet rs) throws Exception {
 		
@@ -229,6 +279,6 @@ private Pokemon mapper(HashMap<Integer, Pokemon> hm, ResultSet rs) throws Except
 		hm.put(idPokemon, p);	
 		
 		return p;
-	}
+	}//mapper
 
 }//class
