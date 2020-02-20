@@ -35,6 +35,7 @@ public class PokemonDAO implements IDAO<Pokemon>{
 	private final static String SQL_UPDATE =  "UPDATE pokemon p SET nombre= ?  WHERE  id= ?;";
 	private final static String SQL_DELETE =  "DELETE FROM pokemon WHERE id=?;";
 	private final static String SQL_INSERT =  "INSERT INTO pokemon (`nombre`) VALUES (?);";
+	private final static String SQL_INSERT_HABILIDAD = "INSERT INTO pokemon_has_habilidad (id_pokemon , id_habilidad) VALUES (? , ?);";
 	
 	
 	private static PokemonDAO INSTANCE;
@@ -208,13 +209,14 @@ public class PokemonDAO implements IDAO<Pokemon>{
 			
 			try {
 				
-			/*
+				/*
 				//no guardara nada en la base de datos por ahora
-				con.setAutoCommit(false);*/
+				con.setAutoCommit(false);
+				*/
 				
 				ps.setString(1, pojo.getNombre());
 	
-				//insert en la tabla
+				//insert en la tabla 
 				//coger el id generado
 				LOG.debug(ps);
 				
@@ -228,25 +230,44 @@ public class PokemonDAO implements IDAO<Pokemon>{
 						pojo.setId(rs.getInt(1));
 					}
 				}
-				/*
-				//creamon un array de habilidades y
-				//(froEach) por cada habilidad , si es que la tiene
-					//INSERT en la tabla pokemon_has_habilidad.
 				
 				
+				try (PreparedStatement psh = con.prepareStatement(SQL_INSERT_HABILIDAD, Statement.RETURN_GENERATED_KEYS );){
+						
+						//creamos un array de habilidades y le introducimos las habilidades del pojo
+						ArrayList<Habilidad> habilidades = new ArrayList<>();
+						habilidades = (ArrayList<Habilidad>) pojo.getHabilidades();
+						
+						//(froEach) por cada habilidad , si es que la tiene
+						for (Habilidad habilidad : habilidades) {
+							//INSERT en la tabla pokemon_has_habilidad.
+							
+							psh.setInt(1, pojo.getId());
+							psh.setInt(2, habilidad.getId());
+							
+							//insert en la tabla 
+							//coger el id generado
+							LOG.debug(psh);
+							
+							int affectedRowsh = psh.executeUpdate();
+							if (affectedRowsh == 1) {
+								
+							}
+						}
+				}//try_PreparedStatement psh
 				
-				//SI TODO VA BIEN se insertear en la base de datos
-				con.commit();
-				*/
+					//SI TODO VA BIEN se insertear en la base de datos
+					con.commit();
+				
 			} catch (Exception e) {
-				//con.rollback();
+				con.rollback();
 				LOG.error(e);
 			} finally {
 				if(con != null)
 				con.close();
-			}
+			}//finaly
 
-		}
+		}//try_Connection
 
 		return pojo;
 		

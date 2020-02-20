@@ -1,6 +1,5 @@
 package com.ipartek.formacion.controller;
 
-import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
@@ -12,44 +11,37 @@ import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import javax.validation.Validator;
-import javax.validation.ValidatorFactory;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import com.google.gson.Gson;
-import com.ipartek.formacion.model.PokemonDAO;
-import com.ipartek.formacion.model.pojo.Pokemon;
-import com.ipartek.formacion.utilidades.Utilidades;
+import com.ipartek.formacion.model.HabilidadDAO;
+import com.ipartek.formacion.model.pojo.Habilidad;
 
 /**
- * Servlet implementation class PokemonController
+ * Servlet implementation class HabilidadesController
  */
-@WebServlet("/api/pokemon/*")
-public class PokemonController extends HttpServlet {
+@WebServlet("/api/habilidad/*")
+public class HabilidadesController extends HttpServlet {
 	private static final long serialVersionUID = 1L;
-	private final static Logger LOG = LogManager.getLogger(PokemonController.class);
+	private final static Logger LOG = LogManager.getLogger(HabilidadesController.class);
+       
 	
 	
-	
-	private ValidatorFactory factory;
-	private Validator validator;
 	Object responseBody = null;
 	int statusCode = HttpServletResponse.SC_OK;
 	String pathinfo;
-	int idPokemon;
 	
 	
-	private static PokemonDAO dao;   
-	  
+	private static HabilidadDAO dao;   
 
 	/**
 	 * @see Servlet#init(ServletConfig)
 	 */
 	public void init(ServletConfig config) throws ServletException {
 		super.init(config);
-		dao = PokemonDAO.getInstance();
+		dao = HabilidadDAO.getInstance();
 	}
 
 	/**
@@ -63,7 +55,6 @@ public class PokemonController extends HttpServlet {
 	 * @see HttpServlet#service(HttpServletRequest request, HttpServletResponse response)
 	 */
 	protected void service(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-
 		response.setContentType("application/json");
 		response.setCharacterEncoding("utf-8");
 		
@@ -73,15 +64,7 @@ public class PokemonController extends HttpServlet {
 		response.setHeader("Access-Control-Allow-Headers", "Content-Type");
 		
 		
-		pathinfo = request.getPathInfo();
 		
-		try {
-			
-			idPokemon = Utilidades.obtenerId(pathinfo);
-			
-		} catch (Exception e) {
-			LOG.debug(e);
-		}
 	//---------------------------------------------------------------------------------------------
 		super.service(request, response);
 	//---------------------------------------------------------------------------------------------
@@ -103,10 +86,7 @@ public class PokemonController extends HttpServlet {
 				out.flush();
 			}
 			
-		}//try (PrintWriter out....)
-		
-		
-		
+		}
 	}
 
 	/**
@@ -115,120 +95,37 @@ public class PokemonController extends HttpServlet {
 	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
 		
 		
-		String nombre = request.getParameter("nombre");
 		
 		LOG.debug("pathinfo= " + pathinfo );
-		LOG.debug("Parametro nombre= " + nombre );
 		
-		
-		
-		if ( nombre != null ) {
-			ArrayList<Pokemon> pokemons = (ArrayList<Pokemon>) dao.getByNombre(nombre);
-			
-			if ( pokemons.isEmpty() ) {
-				statusCode = HttpServletResponse.SC_NO_CONTENT;
+		if ( pathinfo == null || "/".equals(pathinfo) )
+			{
+				responseBody = (ArrayList<Habilidad>)dao.getAll();
 			}
-			
-			responseBody = pokemons;
-			
-		}else if ( pathinfo == null || "/".equals(pathinfo) ){
-			responseBody = (ArrayList<Pokemon>) dao.getAll();
-			
-		}else {
-			int id = Integer.parseInt(pathinfo.split("/")[1]);
-			responseBody = dao.getById(id);
-			if ( responseBody == null ) {
+		else {
 				statusCode = HttpServletResponse.SC_NOT_FOUND;
 			}
-			
-		}
-		
-		
-		
-	}
-
+	}//doGet
 	/**
 	 * @see HttpServlet#doPost(HttpServletRequest request, HttpServletResponse response)
 	 */
 	protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-		//Convertir json del request body a Objeto
-		BufferedReader reader = request.getReader();
-		Gson gson = new Gson();
-		Pokemon poNuevo = gson.fromJson(reader, Pokemon.class);
-		LOG.debug(" Json convertido a Objeto: " + poNuevo);
-		
-		
-		if (poNuevo == null) {
-			statusCode = HttpServletResponse.SC_NO_CONTENT;
-			
-		} else if(poNuevo.getId() == 0) {
-			
-					try {
-						dao.create(poNuevo);
-					} catch (Exception e) {
-						LOG.debug(e);
-					}
-					statusCode = HttpServletResponse.SC_CREATED;
-					// response body
-					responseBody = poNuevo;
-		}
-
+		// TODO Auto-generated method stub
+		doGet(request, response);
 	}
 
 	/**
 	 * @see HttpServlet#doPut(HttpServletRequest, HttpServletResponse)
-	 * 
 	 */
 	protected void doPut(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-		
-		// convertir json del request body a Objeto
-				BufferedReader reader = request.getReader();
-				Gson gson = new Gson();
-				Pokemon poNuevo = gson.fromJson(reader, Pokemon.class);
-				LOG.debug(" Json convertido a Objeto: " + poNuevo);
-
-				try {
-					dao.update(poNuevo);
-				} catch (Exception e) {
-					LOG.debug(e);
-				}
-				
-
-				if (poNuevo == null) {
-					statusCode = HttpServletResponse.SC_NO_CONTENT;
-				} else {
-					statusCode = HttpServletResponse.SC_OK;
-					// response body
-					responseBody = poNuevo;
-				}
+		// TODO Auto-generated method stub
 	}
 
 	/**
 	 * @see HttpServlet#doDelete(HttpServletRequest, HttpServletResponse)
 	 */
 	protected void doDelete(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-
-		Pokemon po = null;
-			try {
-				if (idPokemon != -1) {
-					po = dao.delete(idPokemon);
-				}
-			} catch (Exception e) {
-				LOG.error(e);
-			}
-
-			if (po == null) {
-				statusCode =  HttpServletResponse.SC_NO_CONTENT;
-			} else {
-				statusCode = HttpServletResponse.SC_OK;
-				// response body
-				responseBody = po;
-
-			}
-
-		
-			
-			
+		// TODO Auto-generated method stub
 	}
 
 }

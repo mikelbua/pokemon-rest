@@ -3,8 +3,6 @@ package com.ipartek.formacion.model;
 
 import java.util.List;
 
-import com.ipartek.formacion.model.pojo.Pokemon;
-
 
 public interface IDAO<P> {
 	
