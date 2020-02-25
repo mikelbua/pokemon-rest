@@ -14,7 +14,7 @@ import com.ipartek.formacion.model.pojo.Habilidad;
 
 public class HabilidadDAO implements IDAO<Habilidad>{
 	
-private final static Logger LOG = LogManager.getLogger(HabilidadDAO.class);
+private static final Logger LOG = LogManager.getLogger(HabilidadDAO.class);
 
 
 private final static String SELECT_GET_ALL = "SELECT h.id 'id_haibilad', h.nombre 'nombre_habilidad' "

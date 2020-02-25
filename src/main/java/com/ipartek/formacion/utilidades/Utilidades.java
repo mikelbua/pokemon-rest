@@ -6,7 +6,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 public class Utilidades {
-	private final static Logger LOG = LogManager.getLogger(Utilidades.class);
+	private static final Logger LOG = LogManager.getLogger(Utilidades.class);
 
 	/**
 	 * Obtenemos el id del pathInfo (URI)

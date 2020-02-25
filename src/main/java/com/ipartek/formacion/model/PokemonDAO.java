@@ -1,7 +1,5 @@
 package com.ipartek.formacion.model;
 
-import java.security.KeyStore.ProtectionParameter;
-import java.sql.CallableStatement;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -18,24 +16,26 @@ import com.ipartek.formacion.model.pojo.Pokemon;
 
 public class PokemonDAO implements IDAO<Pokemon>{
 	
-	private final static Logger LOG = LogManager.getLogger(PokemonDAO.class);
+	private static final Logger LOG = LogManager.getLogger(PokemonDAO.class);
 	//SENTENCIOAS SQL
-	private final static String SELECT_GET_ALL =  		"SELECT p.id 'id_pokemon', p.nombre 'nombre_pokemon',h.id 'id_habilidad' , h.nombre 'nombre_habilidad' "
+	private static final String SELECT_GET_ALL =  		"SELECT p.id 'id_pokemon', p.nombre 'nombre_pokemon',h.id 'id_habilidad' , h.nombre 'nombre_habilidad' "
 														+ "FROM (pokemon p LEFT JOIN  pokemon_has_habilidad ph ON p.id = ph.id_pokemon) LEFT JOIN habilidad h ON ph.id_habilidad = h.id "
-														+ " ORDER BY p.id DESC LIMIT 500;";
+														+ " ORDER BY p.nombre DESC LIMIT 500;";
 	
-	private final static String SELECT_GET_BY_ID =	 	"SELECT p.id 'id_pokemon', p.nombre 'nombre_pokemon',h.id 'id_habilidad' , h.nombre 'nombre_habilidad' "
+	private static final String SELECT_GET_BY_ID =	 	"SELECT p.id 'id_pokemon', p.nombre 'nombre_pokemon',h.id 'id_habilidad' , h.nombre 'nombre_habilidad' "
 														+ "FROM (pokemon p LEFT JOIN  pokemon_has_habilidad ph ON p.id = ph.id_pokemon) LEFT JOIN habilidad h ON ph.id_habilidad = h.id "
 														+ "WHERE p.id = ? ORDER BY p.id DESC LIMIT 500;";
 	
-	private final static String SELECT_GET_BY_NOMBRE =  "SELECT  p.id AS id_pokemon , p.nombre as nombre_pokemon ,h.id AS id_habilidad,h.nombre AS nombre_habilidad \r\n" + 
+	private static final String SELECT_GET_BY_NOMBRE =  "SELECT  p.id AS id_pokemon , p.nombre as nombre_pokemon ,h.id AS id_habilidad,h.nombre AS nombre_habilidad \r\n" + 
 														"FROM 	pokemon p,	pokemon_has_habilidad ph,habilidad h \r\n" + 
 														"WHERE ph.id_pokemon = p.id AND ph.id_habilidad = h.id AND p.nombre LIKE ? ;";
 	
-	private final static String SQL_UPDATE =  "UPDATE pokemon p SET nombre= ?  WHERE  id= ?;";
-	private final static String SQL_DELETE =  "DELETE FROM pokemon WHERE id=?;";
-	private final static String SQL_INSERT =  "INSERT INTO pokemon (`nombre`) VALUES (?);";
-	private final static String SQL_INSERT_HABILIDAD = "INSERT INTO pokemon_has_habilidad (id_pokemon , id_habilidad) VALUES (? , ?);";
+	private static final String SQL_UPDATE =  "UPDATE pokemon p SET nombre= ?  WHERE  id= ?;";
+	private static final String SQL_DELETE =  "DELETE FROM pokemon WHERE id=?;";
+	private static final String SQL_HAS_HABLIDIDADES_DELETE =  "DELETE FROM pokemon_has_habilidad WHERE id_pokemon = ?;";
+	
+	private static final String SQL_INSERT =  "INSERT INTO pokemon (`nombre`) VALUES (?);";
+	private static final String SQL_INSERT_HABILIDAD = "INSERT INTO pokemon_has_habilidad (id_pokemon , id_habilidad) VALUES (? , ?);";
 	
 	
 	private static PokemonDAO INSTANCE;
@@ -182,8 +182,8 @@ public class PokemonDAO implements IDAO<Pokemon>{
 
 	@Override
 	public Pokemon update(Pokemon pojo) throws Exception {
-
-			try (Connection con = ConnectionManager.getConnection();
+				Connection con = ConnectionManager.getConnection();
+			try (
 					PreparedStatement pst = con.prepareStatement(SQL_UPDATE)) {
 
 				pst.setString(1, pojo.getNombre());
@@ -199,6 +199,51 @@ public class PokemonDAO implements IDAO<Pokemon>{
 				}
 
 			}
+			
+			//_----------------------------------------------------------------------------------
+			try(PreparedStatement psph = con.prepareStatement(SQL_HAS_HABLIDIDADES_DELETE, Statement.RETURN_GENERATED_KEYS );){
+				psph.setInt(1, pojo.getId());
+				psph.executeUpdate();
+			}
+			
+			try (PreparedStatement psh = con.prepareStatement(SQL_INSERT_HABILIDAD, Statement.RETURN_GENERATED_KEYS );){
+				
+				//creamos un array de habilidades y le introducimos las habilidades del pojo
+				ArrayList<Habilidad> habilidades = new ArrayList<>();
+				habilidades = (ArrayList<Habilidad>) pojo.getHabilidades();
+				
+				//(froEach) por cada habilidad , si es que la tiene
+				for (Habilidad habilidad : habilidades) {
+					//INSERT en la tabla pokemon_has_habilidad.
+					
+					psh.setInt(1, pojo.getId());
+					psh.setInt(2, habilidad.getId());
+					
+					//insert en la tabla 
+					//coger el id generado
+					LOG.debug(psh);
+					
+					
+					int affectedRowsh = psh.executeUpdate();
+					if (affectedRowsh == 1) {
+						
+					}
+				}
+				//SI TODO VA BIEN se insertear en la base de datos
+					con.commit();
+					
+				} catch (Exception e) {
+						//si hay algun error no se ejequtara la SQL(insert)
+						con.rollback();
+						LOG.error(e);
+					} finally {
+						//cerramos flujo
+						if(con != null)
+						con.close();
+					}//finaly
+				
+			//-----------------------------------------------------------------------------------
+			
 			return pojo;
 		}//update
 
@@ -251,6 +296,10 @@ public class PokemonDAO implements IDAO<Pokemon>{
 							
 							int affectedRowsh = psh.executeUpdate();
 							if (affectedRowsh == 1) {
+								ResultSet rs = ps.getGeneratedKeys();
+								if (rs.next()) {
+									
+								}
 								
 							}
 						}

@@ -13,7 +13,7 @@ import com.ipartek.formacion.controller.PokemonController;
 
 public class ConnectionManager {
 
-	private final static Logger LOG = LogManager.getLogger(ConnectionManager.class);
+	private static final Logger LOG = LogManager.getLogger(ConnectionManager.class);
 	
 	private static Connection conn;
 
